@@ -30,7 +30,7 @@ enum DIRECTION {
 };
 
 int snakeLength = 3;
-// 0 = head, -1 = tail
+// index 0 = head, -1 = tail
 vector<Play::Point2D> snakeCoords = { {7, 8}, {6, 8}, {5, 8} };
 vector<int> snakeRotations = { DIRECTION_RIGHT, DIRECTION_RIGHT, DIRECTION_RIGHT };
 Play::Point2D appleCoords = { 10, 8 };
@@ -45,6 +45,11 @@ float timeSinceMove = 0;
 Play::Point2D CoordToPosition(Play::Point2D coord)
 {
 	return { coord.x * 16, coord.y * 16};
+}
+
+void KillPlayer() {
+	gameState = GAME_STATE_ENDED;
+	DrawDebugText({ 128, 128 }, "YOU LOST", Play::cBlue);
 }
 
 void SetupFrameBuffer() {
@@ -73,6 +78,10 @@ void MovePlayer() {
 	if (snakeDirection == DIRECTION_RIGHT) {
 		newPosition.x += 1;
 	}
+	
+	if (count(snakeCoords.begin(), snakeCoords.end(), newPosition)) {
+		KillPlayer();
+	}
 
 	snakeCoords.insert(snakeCoords.begin(), newPosition);
 	snakeRotations.insert(snakeRotations.begin(), snakeDirection);
@@ -100,32 +109,41 @@ void MainGameEntry( PLAY_IGNORE_COMMAND_LINE )
 // Called by PlayBuffer every frame (60 times a second!)
 bool MainGameUpdate( float elapsedTime )
 {
-	SetupFrameBuffer();
+	switch (gameState) {
+	case GAME_STATE_MENU:
+		//gameState == GAME_STATE_PLAYING; // This functionality will be implemented later :D
+		//break;
+	case GAME_STATE_PLAYING:
+		SetupFrameBuffer();
 
-	if (Play::KeyDown(KEY_DOWN)) {
-		snakeDirection = DIRECTION_DOWN;
-	}
-	else if (Play::KeyDown(KEY_UP)) {
-		snakeDirection = DIRECTION_UP;
-	}
-	else if (Play::KeyDown(KEY_LEFT)) {
-		snakeDirection = DIRECTION_LEFT;
-	}
-	else if (Play::KeyDown(KEY_RIGHT)) {
-		snakeDirection = DIRECTION_RIGHT;
-	}
+		if (Play::KeyDown(KEY_DOWN)) {
+			snakeDirection = DIRECTION_DOWN;
+		}
+		else if (Play::KeyDown(KEY_UP)) {
+			snakeDirection = DIRECTION_UP;
+		}
+		else if (Play::KeyDown(KEY_LEFT)) {
+			snakeDirection = DIRECTION_LEFT;
+		}
+		else if (Play::KeyDown(KEY_RIGHT)) {
+			snakeDirection = DIRECTION_RIGHT;
+		}
 
-	if (timeSinceMove >= 1) {
-		MovePlayer();
-		timeSinceMove = 0;
-	}
+		if (timeSinceMove >= 0.5) {
+			MovePlayer();
+			timeSinceMove = 0;
+		}
 
-	timeSinceMove += elapsedTime;
+		timeSinceMove += elapsedTime;
 
-	if (snakeCoords[0] == appleCoords) {
-		EatApple();
+		if (snakeCoords[0] == appleCoords) {
+			EatApple();
+		}
+		Play::PresentDrawingBuffer();
+		break;
+	case GAME_STATE_ENDED:
+		break;
 	}
-	Play::PresentDrawingBuffer();
 	return Play::KeyDown( KEY_ESCAPE );
 }
 
