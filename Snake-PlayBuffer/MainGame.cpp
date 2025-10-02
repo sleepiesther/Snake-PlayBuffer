@@ -4,6 +4,7 @@
 #include "Play.h"
 #include <math.h>
 
+// Allows for a 15*15 grid with each cell being 16*16 px.
 int DISPLAY_WIDTH = 256;
 int DISPLAY_HEIGHT = 256;
 int DISPLAY_SCALE = 2;
@@ -12,7 +13,7 @@ enum SPRITE {
 	SPRITE_APPLE,
 	SPRITE_EMPTY, // Probably won't be used but he's here anyway say hi
 	SPRITE_BACK,
-	SPRITE_BODY,
+	SPRITE_BODY = 6, // Back has 4 sprites for rotation, so the body enum is offset to account for that
 	SPRITE_HEAD
 };
 
@@ -29,6 +30,7 @@ enum DIRECTION {
 	DIRECTION_DOWN
 };
 
+int maxLength = 5;
 int snakeLength = 3;
 // index 0 = head, -1 = tail
 vector<Play::Point2D> snakeCoords = { {7, 8}, {6, 8}, {5, 8} };
@@ -52,15 +54,20 @@ void KillPlayer() {
 	DrawDebugText({ 128, 128 }, "YOU LOST", Play::cBlue);
 }
 
+void WinGame() {
+	gameState = GAME_STATE_ENDED;
+	DrawDebugText({ 128, 128 }, "YOU WIN", Play::cBlue);
+}
+
 void SetupFrameBuffer() {
 	Play::ClearDrawingBuffer(Play::cBlack);
 	Play::DrawSprite(SPRITE_APPLE, CoordToPosition(appleCoords), 0);
-	Play::DrawSpriteRotated(SPRITE_HEAD, CoordToPosition(snakeCoords[0]), 0, snakeRotations[0] * M_PI * 0.5);
+	Play::DrawSprite(SPRITE_HEAD + snakeRotations[0], CoordToPosition(snakeCoords[0]), 0);
 	for (int i = 1; i < snakeCoords.size() - 1; i++) {
-		Play::DrawSpriteRotated(SPRITE_BODY, CoordToPosition(snakeCoords[i]), 0, snakeRotations[i] * M_PI * 0.5);
+		Play::DrawSprite(SPRITE_BODY, CoordToPosition(snakeCoords[i]), 0);
 	}
 	int finalIndex = snakeCoords.size() - 1;
-	Play::DrawSpriteRotated(SPRITE_BACK, CoordToPosition(snakeCoords[finalIndex]), 0, snakeRotations[finalIndex] * M_PI * 0.5);
+	Play::DrawSprite(SPRITE_BACK + snakeRotations[finalIndex - 1], CoordToPosition(snakeCoords[finalIndex]), 0);
 }
 
 void MovePlayer() {
@@ -80,6 +87,9 @@ void MovePlayer() {
 	}
 	
 	if (count(snakeCoords.begin(), snakeCoords.end(), newPosition)) {
+		KillPlayer();
+	}
+	if (newPosition.x > 15 || newPosition.x < 1 || newPosition.y > 15 || newPosition.y < 1) {
 		KillPlayer();
 	}
 
@@ -116,16 +126,20 @@ bool MainGameUpdate( float elapsedTime )
 	case GAME_STATE_PLAYING:
 		SetupFrameBuffer();
 
-		if (Play::KeyDown(KEY_DOWN)) {
+		if (snakeLength == maxLength) {
+			WinGame();
+		}
+
+		if (Play::KeyDown(KEY_DOWN) && snakeDirection != DIRECTION_UP) {
 			snakeDirection = DIRECTION_DOWN;
 		}
-		else if (Play::KeyDown(KEY_UP)) {
+		else if (Play::KeyDown(KEY_UP) && snakeDirection != DIRECTION_DOWN) {
 			snakeDirection = DIRECTION_UP;
 		}
-		else if (Play::KeyDown(KEY_LEFT)) {
+		else if (Play::KeyDown(KEY_LEFT) && snakeDirection != DIRECTION_RIGHT) {
 			snakeDirection = DIRECTION_LEFT;
 		}
-		else if (Play::KeyDown(KEY_RIGHT)) {
+		else if (Play::KeyDown(KEY_RIGHT) && snakeDirection != DIRECTION_LEFT) {
 			snakeDirection = DIRECTION_RIGHT;
 		}
 
