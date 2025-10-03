@@ -121,11 +121,18 @@ bool MainGameUpdate( float elapsedTime )
 {
 	switch (gameState) {
 	case GAME_STATE_MENU:
-		//gameState == GAME_STATE_PLAYING; // This functionality will be implemented later :D
-		//break;
-	case GAME_STATE_PLAYING:
 		SetupFrameBuffer();
 
+		DrawDebugText({ 128, 150 }, "PRESS SPACE", Play::cBlue);
+		
+		if (Play::KeyDown(KEY_SPACE)) {
+			gameState = GAME_STATE_PLAYING;
+			break;
+		}
+		break;
+	case GAME_STATE_PLAYING:
+		SetupFrameBuffer();
+		
 		if (snakeLength == maxLength) {
 			WinGame();
 		}
@@ -153,11 +160,11 @@ bool MainGameUpdate( float elapsedTime )
 		if (snakeCoords[0] == appleCoords) {
 			EatApple();
 		}
-		Play::PresentDrawingBuffer();
 		break;
 	case GAME_STATE_ENDED:
 		break;
 	}
+	Play::PresentDrawingBuffer();
 	return Play::KeyDown( KEY_ESCAPE );
 }
 
