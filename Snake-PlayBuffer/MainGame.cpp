@@ -30,8 +30,11 @@ enum DIRECTION {
 	DIRECTION_DOWN
 };
 
-int maxLength = 5;
+int maxLength = 225;
 int snakeLength = 3;
+float moveTime = 0.5f;
+bool pressed = false;
+
 // index 0 = head, -1 = tail
 vector<Play::Point2D> snakeCoords = { {7, 8}, {6, 8}, {5, 8} };
 vector<int> snakeRotations = { DIRECTION_RIGHT, DIRECTION_RIGHT, DIRECTION_RIGHT };
@@ -47,6 +50,26 @@ float timeSinceMove = 0;
 Play::Point2D CoordToPosition(Play::Point2D coord)
 {
 	return { coord.x * 16, coord.y * 16};
+}
+
+void HandleWraparound(Play::Point2D& coord)
+{
+	if (coord.x > 15)
+	{
+		coord.x = 1;
+	}
+	if (coord.y > 15)
+	{
+		coord.y = 1;
+	}
+	if (coord.x < 1)
+	{
+		coord.x = 16;
+	}
+	if (coord.y < 1)
+	{
+		coord.y = 16;
+	}
 }
 
 void KillPlayer() {
@@ -89,9 +112,8 @@ void MovePlayer() {
 	if (count(snakeCoords.begin(), snakeCoords.end(), newPosition)) {
 		KillPlayer();
 	}
-	if (newPosition.x > 15 || newPosition.x < 1 || newPosition.y > 15 || newPosition.y < 1) {
-		KillPlayer();
-	}
+	
+	HandleWraparound(newPosition);
 
 	snakeCoords.insert(snakeCoords.begin(), newPosition);
 	snakeRotations.insert(snakeRotations.begin(), snakeDirection);
@@ -119,16 +141,47 @@ void MainGameEntry( PLAY_IGNORE_COMMAND_LINE )
 // Called by PlayBuffer every frame (60 times a second!)
 bool MainGameUpdate( float elapsedTime )
 {
+	string speedString = "<  " + std::to_string(moveTime).substr(0, 4) + " seconds  >";
+	
 	switch (gameState) {
 	case GAME_STATE_MENU:
 		SetupFrameBuffer();
 
 		DrawDebugText({ 128, 150 }, "PRESS SPACE", Play::cBlue);
+		DrawDebugText({ 190, 30 }, "GAME SPEED", Play::cRed);
+		DrawDebugText({ 190, 10 }, speedString.c_str(), Play::cRed);
+
+		if (Play::GetMouseButton(LEFT) && !pressed)
+		{
+			pressed = true;
+			Play::Point2D mousePos = Play::GetMousePos();
+
+			if (mousePos.x > 240 && mousePos.y < 15)
+			{
+				if (moveTime < 4.9)
+				{
+					moveTime += 0.1f;
+
+				}
+			}
+			else if (mousePos.x > 120 && mousePos.x < 140 && mousePos.y < 15)
+			{
+				if (moveTime > 0.2f)
+				{
+					moveTime -= 0.1f;
+				}
+			}
+		}
+		if (!Play::GetMouseButton(LEFT))
+		{
+			pressed = false;
+		}
 		
 		if (Play::KeyDown(KEY_SPACE)) {
 			gameState = GAME_STATE_PLAYING;
 			break;
 		}
+
 		break;
 	case GAME_STATE_PLAYING:
 		SetupFrameBuffer();
@@ -150,7 +203,7 @@ bool MainGameUpdate( float elapsedTime )
 			snakeDirection = DIRECTION_RIGHT;
 		}
 
-		if (timeSinceMove >= 0.5) {
+		if (timeSinceMove >= moveTime) {
 			MovePlayer();
 			timeSinceMove = 0;
 		}
